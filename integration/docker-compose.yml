@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v3.7.9
+    image: ghcr.io/traefik/traefik:v3.7.9
     command:
       - --configFile=/etc/traefik/traefik.yml
     ports:
@@ -13,4 +13,4 @@ services:
       - whoami
 
   whoami:
-    image: traefik/whoami:v1.11.0
+    image: ghcr.io/traefik/whoami:v1.11.0
