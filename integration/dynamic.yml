@@ -1,0 +1,29 @@
+http:
+  routers:
+    matched:
+      rule: PathPrefix(`/matched`)
+      entryPoints:
+        - web
+      middlewares:
+        - add-query-parameters
+      service: whoami
+    unmatched:
+      rule: PathPrefix(`/unmatched`)
+      entryPoints:
+        - web
+      service: whoami
+
+  middlewares:
+    add-query-parameters:
+      plugin:
+        queryparam:
+          queryParams:
+            added: plugin
+            replace: configured
+            special: space & symbols
+
+  services:
+    whoami:
+      loadBalancer:
+        servers:
+          - url: http://whoami:80
