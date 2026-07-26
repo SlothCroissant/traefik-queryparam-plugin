@@ -18,9 +18,12 @@ http:
       plugin:
         QueryParamsPlugin:
           addQueryParams:
-            added: plugin
-            replace: configured
-            special: space & symbols
+            - key: added
+              value: plugin
+            - key: replace
+              value: configured
+            - key: special
+              value: space & symbols
           removeQueryParams:
             - key: remove
               value: first
