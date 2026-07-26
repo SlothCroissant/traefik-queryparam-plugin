@@ -147,3 +147,7 @@ Every same-repository pull request with a releasing title publishes a GitHub
 prerelease. It uses the `pr` prerelease token and the pull request head commit
 SHA as SemVer build metadata, and its tag points to that head commit. Forked pull
 requests do not publish releases because their workflow tokens are read-only.
+
+After publishing, the workflow waits for the Traefik Plugin Registry to index the
+prerelease and then starts Traefik using `experimental.plugins` with that exact
+version. This integration test does not mount the plugin source as a local plugin.

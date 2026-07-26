@@ -51,6 +51,9 @@ jobs:
     concurrency:
       group: prerelease-pr-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+    outputs:
+      released: ${{ steps.prerelease.outputs.released }}
+      tag: ${{ steps.prerelease.outputs.tag }}
     steps:
       - name: Check out pull request head
         uses: actions/checkout@v7.0.1
@@ -84,3 +87,20 @@ jobs:
             echo
             echo "This GitHub release is marked as a prerelease and is tagged at the pull request head commit."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  remote-plugin-integration:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.prerelease.outputs.released == 'true'
+    name: Test published Traefik plugin
+    needs: prerelease
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out pull request head
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Test Traefik registry plugin
+        env:
+          TRAEFIK_REMOTE_PLUGIN_VERSION: ${{ needs.prerelease.outputs.tag }}
+        run: bash integration/run.sh

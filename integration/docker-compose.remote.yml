@@ -1,0 +1,15 @@
+services:
+  traefik:
+    image: ghcr.io/traefik/traefik:v3.7.9
+    command:
+      - --configFile=/etc/traefik/traefik.yml
+    ports:
+      - "127.0.0.1:${TRAEFIK_TEST_PORT:-18080}:80"
+    volumes:
+      - ${TRAEFIK_CONFIG_FILE}:/etc/traefik/traefik.yml:ro
+      - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
+    depends_on:
+      - whoami
+
+  whoami:
+    image: ghcr.io/traefik/whoami:v1.11.0
