@@ -8,7 +8,7 @@ providers:
 
 experimental:
   localPlugins:
-    queryparam:
+    QueryParamsPlugin:
       moduleName: github.com/SlothCroissant/traefik-queryparam-plugin
 
 log:
