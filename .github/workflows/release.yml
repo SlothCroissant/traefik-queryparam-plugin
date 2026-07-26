@@ -8,11 +8,15 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   release:
     name: Create release
     runs-on: ubuntu-latest
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+      tag: ${{ steps.release.outputs.tag }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
@@ -33,3 +37,37 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
           generate_release_notes: true
+
+  plugin-image:
+    if: needs.release.outputs.released == 'true'
+    name: Publish plugin image
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Lowercase repository owner
+        id: repo-owner
+        run: echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push plugin image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: PLUGIN_VERSION=${{ needs.release.outputs.tag }}
+          tags: |
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/traefik-queryparam-plugin:${{ needs.release.outputs.tag }}
+            ghcr.io/${{ steps.repo-owner.outputs.owner }}/traefik-queryparam-plugin:latest

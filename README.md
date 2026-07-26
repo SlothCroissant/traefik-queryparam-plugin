@@ -16,8 +16,9 @@ The middleware:
 
 This plugin is intended for Traefik installed with the Helm chart and the
 Kubernetes CRD provider. Use `localPlugins` to avoid the Traefik Plugin Catalog.
-An init container downloads an exact Git tag into a shared `emptyDir` before
-Traefik starts:
+The release workflow publishes an init-container image with the same tag as the
+plugin release. It copies the embedded plugin source into a shared `emptyDir`
+before Traefik starts:
 
 ```yaml
 providers:
@@ -35,17 +36,7 @@ deployment:
       emptyDir: {}
   initContainers:
     - name: fetch-queryparams-plugin
-      image: alpine/git:2.49.1
-      command:
-        - sh
-        - -ec
-        - |
-          git clone --depth 1 --branch "${PLUGIN_VERSION}" \
-            https://github.com/SlothCroissant/traefik-queryparam-plugin.git \
-            /plugins-local/src/github.com/SlothCroissant/traefik-queryparam-plugin
-      env:
-        - name: PLUGIN_VERSION
-          value: v1.1.0
+      image: ghcr.io/slothcroissant/traefik-queryparam-plugin:v1.1.0
       volumeMounts:
         - name: plugins-local
           mountPath: /plugins-local
@@ -55,10 +46,9 @@ additionalVolumeMounts:
     mountPath: /plugins-local
 ```
 
-Set `PLUGIN_VERSION` to the release tag you want to run. The init container
-and Traefik must mount the same `/plugins-local` volume. For private source
-repositories, replace the clone URL with your authenticated Git endpoint and
-provide credentials through a Kubernetes Secret.
+Set the image tag to the plugin release tag you want to run. The init container
+and Traefik must mount the same `/plugins-local` volume. This image contains no
+Traefik runtime; it only stages the plugin source for the Traefik container.
 
 Create a `Middleware` resource in the same namespace as the route that uses
 it:
