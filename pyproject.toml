@@ -1,0 +1,18 @@
+[tool.semantic_release]
+commit_parser = "conventional"
+tag_format = "v{version}"
+
+[tool.semantic_release.commit_parser_options]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+parse_squash_commits = true
+ignore_merge_commits = true
+
+[tool.semantic_release.branches.main]
+match = "^main$"
+prerelease = false
+
+[tool.semantic_release.branches.pull_request]
+match = "^pr/[0-9]+$"
+prerelease = true
+prerelease_token = "pr"

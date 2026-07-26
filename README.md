@@ -129,3 +129,20 @@ TRAEFIK_TEST_PORT=28080 make integration-test
 
 Pull requests run formatting, `go vet`, race-enabled unit tests, and the Docker
 integration test through GitHub Actions.
+
+## Releases
+
+The release workflow uses python-semantic-release and Conventional Commit pull
+request titles. The title becomes the merge commit message, so it determines the
+next release:
+
+- `feat: ...` creates a minor release.
+- `fix: ...` or `perf: ...` creates a patch release.
+- `feat!: ...` or a `BREAKING CHANGE:` footer creates a major release; use
+  this for incompatible plugin configuration changes.
+- `docs:`, `refactor:`, `test:`, `ci:`, `build:`, `chore:`, and `style:` do not
+  create a release.
+
+Every pull request also calculates a read-only prerelease version. It uses the
+`pr` prerelease token and the pull request head commit SHA as SemVer build
+metadata; it does not create a tag or GitHub release.
