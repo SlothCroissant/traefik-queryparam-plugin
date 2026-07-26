@@ -1,4 +1,4 @@
-displayName: Query Parameter
+displayName: QueryParamsPlugin
 type: middleware
 
 import: github.com/SlothCroissant/traefik-queryparam-plugin
@@ -6,7 +6,7 @@ import: github.com/SlothCroissant/traefik-queryparam-plugin
 summary: Add and remove configured query parameters from HTTP requests
 
 testData:
-  QueryParams:
+  AddQueryParams:
     source: traefik
     environment: production
   RemoveQueryParams:

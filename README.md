@@ -25,7 +25,7 @@ providers:
 
 experimental:
   plugins:
-    queryparam:
+    QueryParamsPlugin:
       moduleName: github.com/SlothCroissant/traefik-queryparam-plugin
       version: v0.1.0
 ```
@@ -41,8 +41,8 @@ metadata:
   namespace: default
 spec:
   plugin:
-    queryparam:
-      queryParams:
+    QueryParamsPlugin:
+      addQueryParams:
         source: traefik
         environment: production
       removeQueryParams:
@@ -80,8 +80,8 @@ A request for `/items?page=2&source=client` is forwarded as:
 
 Each `removeQueryParams` item removes every value for its `key` when `value` is
 omitted, or only matching values when `value` is set. Removals are applied
-before `queryParams` additions. Query strings are encoded in deterministic key
-order. Traefik rejects a middleware with both `queryParams` and
+before `addQueryParams` additions. Query strings are encoded in deterministic key
+order. Traefik rejects a middleware with both `addQueryParams` and
 `removeQueryParams` empty.
 
 ## Local plugin development
@@ -91,7 +91,7 @@ For local development, register the repository as a local plugin:
 ```yaml
 experimental:
   localPlugins:
-    queryparam:
+    QueryParamsPlugin:
       moduleName: github.com/SlothCroissant/traefik-queryparam-plugin
 ```
 

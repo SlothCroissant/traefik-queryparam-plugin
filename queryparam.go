@@ -10,7 +10,7 @@ import (
 
 // Config defines the query parameters added and removed by the middleware.
 type Config struct {
-	QueryParams       map[string]string   `json:"queryParams,omitempty"`
+	AddQueryParams    map[string]string   `json:"addQueryParams,omitempty"`
 	RemoveQueryParams []QueryParamRemoval `json:"removeQueryParams,omitempty"`
 }
 
@@ -24,7 +24,7 @@ type QueryParamRemoval struct {
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		QueryParams:       make(map[string]string),
+		AddQueryParams:    make(map[string]string),
 		RemoveQueryParams: make([]QueryParamRemoval, 0),
 	}
 }
@@ -32,7 +32,7 @@ func CreateConfig() *Config {
 // QueryParam applies configured query parameter changes before forwarding a request.
 type QueryParam struct {
 	next              http.Handler
-	queryParams       map[string]string
+	addQueryParams    map[string]string
 	removeQueryParams []QueryParamRemoval
 }
 
@@ -44,16 +44,16 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	if config == nil {
 		return nil, fmt.Errorf("configuration cannot be nil")
 	}
-	if len(config.QueryParams) == 0 && len(config.RemoveQueryParams) == 0 {
-		return nil, fmt.Errorf("queryParams and removeQueryParams cannot both be empty")
+	if len(config.AddQueryParams) == 0 && len(config.RemoveQueryParams) == 0 {
+		return nil, fmt.Errorf("addQueryParams and removeQueryParams cannot both be empty")
 	}
 
-	queryParams := make(map[string]string, len(config.QueryParams))
-	for key, value := range config.QueryParams {
+	addQueryParams := make(map[string]string, len(config.AddQueryParams))
+	for key, value := range config.AddQueryParams {
 		if key == "" {
 			return nil, fmt.Errorf("query parameter name cannot be empty")
 		}
-		queryParams[key] = value
+		addQueryParams[key] = value
 	}
 
 	removeQueryParams := make([]QueryParamRemoval, len(config.RemoveQueryParams))
@@ -70,7 +70,7 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 
 	return &QueryParam{
 		next:              next,
-		queryParams:       queryParams,
+		addQueryParams:    addQueryParams,
 		removeQueryParams: removeQueryParams,
 	}, nil
 }
@@ -97,7 +97,7 @@ func (q *QueryParam) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 		query[removal.Key] = filtered
 	}
-	for key, value := range q.queryParams {
+	for key, value := range q.addQueryParams {
 		query.Set(key, value)
 	}
 	req.URL.RawQuery = query.Encode()
