@@ -6,6 +6,7 @@ services:
     ports:
       - "127.0.0.1:${TRAEFIK_TEST_PORT:-18080}:80"
     volumes:
+      # The integration test exercises Traefik's localPlugins mode.
       - ../:/plugins-local/src/github.com/SlothCroissant/traefik-queryparam-plugin:ro
       - ./traefik.yml:/etc/traefik/traefik.yml:ro
       - ./dynamic.yml:/etc/traefik/dynamic.yml:ro
