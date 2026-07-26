@@ -15,8 +15,9 @@ The middleware:
 ## Kubernetes Installation
 
 This plugin is intended for Traefik installed with the Helm chart and the
-Kubernetes CRD provider. Enable the provider and register the plugin in your
-`values.yaml`:
+Kubernetes CRD provider. Use `localPlugins` to avoid the Traefik Plugin Catalog.
+An init container downloads an exact Git tag into a shared `emptyDir` before
+Traefik starts:
 
 ```yaml
 providers:
@@ -24,11 +25,40 @@ providers:
     enabled: true
 
 experimental:
-  plugins:
+  localPlugins:
     QueryParamsPlugin:
       moduleName: github.com/SlothCroissant/traefik-queryparam-plugin
-      version: v0.1.0
+
+deployment:
+  additionalVolumes:
+    - name: plugins-local
+      emptyDir: {}
+  initContainers:
+    - name: fetch-queryparams-plugin
+      image: alpine/git:2.49.1
+      command:
+        - sh
+        - -ec
+        - |
+          git clone --depth 1 --branch "${PLUGIN_VERSION}" \
+            https://github.com/SlothCroissant/traefik-queryparam-plugin.git \
+            /plugins-local/src/github.com/SlothCroissant/traefik-queryparam-plugin
+      env:
+        - name: PLUGIN_VERSION
+          value: v1.1.0
+      volumeMounts:
+        - name: plugins-local
+          mountPath: /plugins-local
+
+additionalVolumeMounts:
+  - name: plugins-local
+    mountPath: /plugins-local
 ```
+
+Set `PLUGIN_VERSION` to the release tag you want to run. The init container
+and Traefik must mount the same `/plugins-local` volume. For private source
+repositories, replace the clone URL with your authenticated Git endpoint and
+provide credentials through a Kubernetes Secret.
 
 Create a `Middleware` resource in the same namespace as the route that uses
 it:
@@ -87,7 +117,7 @@ applied before additions. Query strings are encoded in deterministic key order.
 Traefik rejects a middleware with both `addQueryParams` and
 `removeQueryParams` empty.
 
-## Local plugin development
+## Local Development
 
 For local development, register the repository as a local plugin:
 
@@ -104,7 +134,7 @@ Traefik expects the repository at:
 /plugins-local/src/github.com/SlothCroissant/traefik-queryparam-plugin
 ```
 
-The included Compose configuration mounts the repository at that location.
+The included Compose integration test mounts the repository at that location.
 
 ## Validation
 
