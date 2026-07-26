@@ -11,11 +11,17 @@ The middleware:
 - relies on Go's standard URL encoding for names and values; and
 - only affects routers to which the middleware is attached.
 
-## Configuration
+## Kubernetes Installation
 
-Register the plugin in Traefik's static configuration:
+This plugin is intended for Traefik installed with the Helm chart and the
+Kubernetes CRD provider. Enable the provider and register the plugin in your
+`values.yaml`:
 
 ```yaml
+providers:
+  kubernetesCRD:
+    enabled: true
+
 experimental:
   plugins:
     queryparam:
@@ -23,24 +29,42 @@ experimental:
       version: v0.1.0
 ```
 
-Then define and attach the middleware in dynamic configuration:
+Create a `Middleware` resource in the same namespace as the route that uses
+it:
 
 ```yaml
-http:
-  routers:
-    app:
-      rule: Host(`app.example.com`)
-      middlewares:
-        - app-query-parameters
-      service: app
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: app-query-parameters
+  namespace: default
+spec:
+  plugin:
+    queryparam:
+      queryParams:
+        source: traefik
+        environment: production
+```
 
-  middlewares:
-    app-query-parameters:
-      plugin:
-        queryparam:
-          queryParams:
-            source: traefik
-            environment: production
+Reference the middleware from an `IngressRoute`:
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: app
+  namespace: default
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`app.example.com`)
+      kind: Rule
+      middlewares:
+        - name: app-query-parameters
+      services:
+        - name: app
+          port: 80
 ```
 
 A request for `/items?page=2&source=client` is forwarded as:
