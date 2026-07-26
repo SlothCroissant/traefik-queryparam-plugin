@@ -1,0 +1,7 @@
+.git
+.github
+integration
+Dockerfile
+.dockerignore
+README.md
+Makefile
