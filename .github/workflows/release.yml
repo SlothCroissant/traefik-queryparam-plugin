@@ -68,12 +68,12 @@ jobs:
           build_metadata: ${{ github.event.pull_request.head.sha }}
           build: "false"
           changelog: "false"
-      - name: Write prerelease summary
+      - name: Write calculated version summary
         env:
           VERSION: ${{ steps.prerelease.outputs.version }}
         run: |
           {
-            echo "## Planned prerelease"
+            echo "## Calculated prerelease version"
             echo
             echo "\`${VERSION}\`"
             echo

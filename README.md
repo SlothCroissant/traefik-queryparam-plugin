@@ -143,6 +143,6 @@ next release:
 - `docs:`, `refactor:`, `test:`, `ci:`, `build:`, `chore:`, and `style:` do not
   create a release.
 
-Every pull request also calculates a read-only prerelease version. It uses the
-`pr` prerelease token and the pull request head commit SHA as SemVer build
-metadata; it does not create a tag or GitHub release.
+Every pull request with a releasing title also calculates a read-only prerelease
+version. It uses the `pr` prerelease token and the pull request head commit SHA
+as SemVer build metadata; it does not create a tag or GitHub release.
