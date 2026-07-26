@@ -7,8 +7,10 @@ summary: Add and remove configured query parameters from HTTP requests
 
 testData:
   AddQueryParams:
-    source: traefik
-    environment: production
+    - key: source
+      value: traefik
+    - key: environment
+      value: production
   RemoveQueryParams:
     - key: source
       value: client

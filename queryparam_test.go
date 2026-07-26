@@ -17,7 +17,7 @@ func TestCreateConfig(t *testing.T) {
 		t.Fatal("CreateConfig() returned nil")
 	}
 	if config.AddQueryParams == nil {
-		t.Fatal("CreateConfig() returned a nil AddQueryParams map")
+		t.Fatal("CreateConfig() returned nil AddQueryParams")
 	}
 	if config.RemoveQueryParams == nil {
 		t.Fatal("CreateConfig() returned a nil RemoveQueryParams map")
@@ -37,7 +37,7 @@ func TestNewValidation(t *testing.T) {
 	}{
 		{
 			name:   "nil next handler",
-			config: &Config{AddQueryParams: map[string]string{"key": "value"}},
+			config: &Config{AddQueryParams: []QueryParamAddition{{Key: "key", Value: "value"}}},
 			want:   "next handler cannot be nil",
 		},
 		{
@@ -54,7 +54,7 @@ func TestNewValidation(t *testing.T) {
 		{
 			name:   "empty parameter name",
 			next:   next,
-			config: &Config{AddQueryParams: map[string]string{"": "value"}},
+			config: &Config{AddQueryParams: []QueryParamAddition{{Value: "value"}}},
 			want:   "query parameter name cannot be empty",
 		},
 		{
@@ -91,7 +91,7 @@ func TestServeHTTP(t *testing.T) {
 		name              string
 		method            string
 		target            string
-		addQueryParams    map[string]string
+		addQueryParams    []QueryParamAddition
 		removeQueryParams []QueryParamRemoval
 		wantPath          string
 		wantQuery         url.Values
@@ -100,7 +100,7 @@ func TestServeHTTP(t *testing.T) {
 			name:           "adds parameter",
 			method:         http.MethodGet,
 			target:         "http://example.com/resource",
-			addQueryParams: map[string]string{"added": "value"},
+			addQueryParams: []QueryParamAddition{{Key: "added", Value: "value"}},
 			wantPath:       "/resource",
 			wantQuery:      url.Values{"added": {"value"}},
 		},
@@ -108,7 +108,7 @@ func TestServeHTTP(t *testing.T) {
 			name:           "preserves unrelated parameter",
 			method:         http.MethodGet,
 			target:         "http://example.com/resource?existing=original",
-			addQueryParams: map[string]string{"added": "value"},
+			addQueryParams: []QueryParamAddition{{Key: "added", Value: "value"}},
 			wantPath:       "/resource",
 			wantQuery: url.Values{
 				"added":    {"value"},
@@ -119,7 +119,7 @@ func TestServeHTTP(t *testing.T) {
 			name:           "replaces all values with configured value",
 			method:         http.MethodGet,
 			target:         "http://example.com/resource?replace=first&replace=second",
-			addQueryParams: map[string]string{"replace": "configured"},
+			addQueryParams: []QueryParamAddition{{Key: "replace", Value: "configured"}},
 			wantPath:       "/resource",
 			wantQuery:      url.Values{"replace": {"configured"}},
 		},
@@ -146,7 +146,7 @@ func TestServeHTTP(t *testing.T) {
 			name:           "applies removals before additions",
 			method:         http.MethodGet,
 			target:         "http://example.com/resource?replace=client&remove=first&remove=second",
-			addQueryParams: map[string]string{"replace": "configured"},
+			addQueryParams: []QueryParamAddition{{Key: "replace", Value: "configured"}},
 			removeQueryParams: []QueryParamRemoval{
 				{Key: "remove"},
 				{Key: "replace", Value: stringPtr("client")},
@@ -158,9 +158,9 @@ func TestServeHTTP(t *testing.T) {
 			name:   "encodes names and values",
 			method: http.MethodPost,
 			target: "http://example.com/resource",
-			addQueryParams: map[string]string{
-				"special name": "space & symbols",
-				"empty":        "",
+			addQueryParams: []QueryParamAddition{
+				{Key: "special name", Value: "space & symbols"},
+				{Key: "empty", Value: ""},
 			},
 			wantPath: "/resource",
 			wantQuery: url.Values{
@@ -216,7 +216,7 @@ func TestNewCopiesConfiguration(t *testing.T) {
 	t.Parallel()
 
 	config := &Config{
-		AddQueryParams:    map[string]string{"stable": "original"},
+		AddQueryParams:    []QueryParamAddition{{Key: "stable", Value: "original"}},
 		RemoveQueryParams: []QueryParamRemoval{{Key: "remove", Value: stringPtr("original")}},
 	}
 	var received url.Values
@@ -228,7 +228,7 @@ func TestNewCopiesConfiguration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
-	config.AddQueryParams["stable"] = "mutated"
+	config.AddQueryParams[0].Value = "mutated"
 	*config.RemoveQueryParams[0].Value = "mutated"
 
 	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://example.com/?remove=original&remove=mutated", nil))

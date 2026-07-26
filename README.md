@@ -43,8 +43,10 @@ spec:
   plugin:
     QueryParamsPlugin:
       addQueryParams:
-        source: traefik
-        environment: production
+        - key: source
+          value: traefik
+        - key: environment
+          value: production
       removeQueryParams:
         - key: temporary
         - key: source
@@ -78,10 +80,11 @@ A request for `/items?page=2&source=client` is forwarded as:
 /items?environment=production&page=2&source=traefik
 ```
 
-Each `removeQueryParams` item removes every value for its `key` when `value` is
-omitted, or only matching values when `value` is set. Removals are applied
-before `addQueryParams` additions. Query strings are encoded in deterministic key
-order. Traefik rejects a middleware with both `addQueryParams` and
+Each `addQueryParams` item adds or replaces a parameter with its `key` and
+`value`. Each `removeQueryParams` item removes every value for its `key` when
+`value` is omitted, or only matching values when `value` is set. Removals are
+applied before additions. Query strings are encoded in deterministic key order.
+Traefik rejects a middleware with both `addQueryParams` and
 `removeQueryParams` empty.
 
 ## Local plugin development

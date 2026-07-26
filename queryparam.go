@@ -10,8 +10,14 @@ import (
 
 // Config defines the query parameters added and removed by the middleware.
 type Config struct {
-	AddQueryParams    map[string]string   `json:"addQueryParams,omitempty"`
-	RemoveQueryParams []QueryParamRemoval `json:"removeQueryParams,omitempty"`
+	AddQueryParams    []QueryParamAddition `json:"addQueryParams,omitempty"`
+	RemoveQueryParams []QueryParamRemoval  `json:"removeQueryParams,omitempty"`
+}
+
+// QueryParamAddition defines a query parameter value to add or replace.
+type QueryParamAddition struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // QueryParamRemoval defines a query parameter removal rule. Omit Value to
@@ -24,7 +30,7 @@ type QueryParamRemoval struct {
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		AddQueryParams:    make(map[string]string),
+		AddQueryParams:    make([]QueryParamAddition, 0),
 		RemoveQueryParams: make([]QueryParamRemoval, 0),
 	}
 }
@@ -32,7 +38,7 @@ func CreateConfig() *Config {
 // QueryParam applies configured query parameter changes before forwarding a request.
 type QueryParam struct {
 	next              http.Handler
-	addQueryParams    map[string]string
+	addQueryParams    []QueryParamAddition
 	removeQueryParams []QueryParamRemoval
 }
 
@@ -48,12 +54,12 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		return nil, fmt.Errorf("addQueryParams and removeQueryParams cannot both be empty")
 	}
 
-	addQueryParams := make(map[string]string, len(config.AddQueryParams))
-	for key, value := range config.AddQueryParams {
-		if key == "" {
+	addQueryParams := make([]QueryParamAddition, len(config.AddQueryParams))
+	for i, addition := range config.AddQueryParams {
+		if addition.Key == "" {
 			return nil, fmt.Errorf("query parameter name cannot be empty")
 		}
-		addQueryParams[key] = value
+		addQueryParams[i] = addition
 	}
 
 	removeQueryParams := make([]QueryParamRemoval, len(config.RemoveQueryParams))
@@ -97,8 +103,8 @@ func (q *QueryParam) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 		}
 		query[removal.Key] = filtered
 	}
-	for key, value := range q.addQueryParams {
-		query.Set(key, value)
+	for _, addition := range q.addQueryParams {
+		query.Set(addition.Key, addition.Value)
 	}
 	req.URL.RawQuery = query.Encode()
 	req.RequestURI = req.URL.RequestURI()
