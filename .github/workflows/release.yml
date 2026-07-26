@@ -43,9 +43,14 @@ jobs:
           git_committer_email: "actions@users.noreply.github.com"
 
   prerelease:
-    if: github.event_name == 'pull_request'
-    name: Calculate prerelease
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    name: Publish prerelease
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: prerelease-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     steps:
       - name: Check out pull request head
         uses: actions/checkout@v7.0.1
@@ -57,25 +62,25 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: git switch --force-create "pr/${PR_NUMBER}" "${PR_HEAD_SHA}"
-      - name: Calculate prerelease version
+      - name: Publish prerelease version
         id: prerelease
         uses: python-semantic-release/python-semantic-release@v10.6.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          no_operation_mode: "true"
           prerelease: "true"
           prerelease_token: "pr"
           build_metadata: ${{ github.event.pull_request.head.sha }}
           build: "false"
           changelog: "false"
-      - name: Write calculated version summary
+          commit: "false"
+      - name: Write prerelease summary
         env:
           VERSION: ${{ steps.prerelease.outputs.version }}
         run: |
           {
-            echo "## Calculated prerelease version"
+            echo "## Published prerelease"
             echo
             echo "\`${VERSION}\`"
             echo
-            echo "This validation is read-only; it does not create a tag or GitHub release."
+            echo "This GitHub release is marked as a prerelease and is tagged at the pull request head commit."
           } >> "$GITHUB_STEP_SUMMARY"

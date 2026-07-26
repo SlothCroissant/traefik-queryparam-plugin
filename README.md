@@ -143,6 +143,7 @@ next release:
 - `docs:`, `refactor:`, `test:`, `ci:`, `build:`, `chore:`, and `style:` do not
   create a release.
 
-Every pull request with a releasing title also calculates a read-only prerelease
-version. It uses the `pr` prerelease token and the pull request head commit SHA
-as SemVer build metadata; it does not create a tag or GitHub release.
+Every same-repository pull request with a releasing title publishes a GitHub
+prerelease. It uses the `pr` prerelease token and the pull request head commit
+SHA as SemVer build metadata, and its tag points to that head commit. Forked pull
+requests do not publish releases because their workflow tokens are read-only.
