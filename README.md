@@ -43,12 +43,13 @@ deployment:
 
 additionalVolumeMounts:
   - name: plugins-local
-    mountPath: /plugins-local
+    mountPath: /plugins-local/src/github.com/SlothCroissant/traefik-queryparam-plugin
 ```
 
 Set the image tag to the plugin release tag you want to run. The init container
-and Traefik must mount the same `/plugins-local` volume. This image contains no
-Traefik runtime; it only stages the plugin source for the Traefik container.
+copies the plugin files directly into `/plugins-local`; Traefik mounts that same
+volume at the module path it requires. This image contains no Traefik runtime; it
+only stages the plugin source for the Traefik container.
 
 Create a `Middleware` resource in the same namespace as the route that uses
 it:
