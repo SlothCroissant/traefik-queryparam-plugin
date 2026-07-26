@@ -24,7 +24,7 @@ cleanup
 matched_response=""
 for _ in $(seq 1 30); do
   if matched_response="$(curl --fail --silent --show-error \
-    "${base_url}/matched?keep=original&replace=client" 2>/dev/null)"; then
+    "${base_url}/matched?keep=original&replace=client&remove=first&remove=second&remove-all=first&remove-all=second" 2>/dev/null)"; then
     break
   fi
   sleep 1
@@ -34,9 +34,9 @@ if [[ -z "${matched_response}" ]]; then
   fail "Traefik did not return a response within 30 seconds"
 fi
 
-expected_request='GET /matched?added=plugin&keep=original&replace=configured&special=space+%26+symbols HTTP/1.1'
+expected_request='GET /matched?added=plugin&keep=original&remove=second&replace=configured&special=space+%26+symbols HTTP/1.1'
 if ! grep --fixed-strings --quiet "${expected_request}" <<<"${matched_response}"; then
-  fail "the matched router did not add, preserve, replace, and encode query parameters"
+  fail "the matched router did not add, remove, preserve, replace, and encode query parameters"
 fi
 
 unmatched_response="$(curl --fail --silent --show-error "${base_url}/unmatched?keep=original")"

@@ -1,12 +1,13 @@
 # Traefik Query Parameter Plugin
 
-A focused Traefik HTTP middleware that guarantees configured query parameters
-are present on every request handled by a router.
+A focused Traefik HTTP middleware that adds and removes configured query
+parameters on every request handled by a router.
 
 The middleware:
 
 - adds configured parameters when they are absent;
 - replaces existing values for configured parameter names;
+- removes values for configured parameter names;
 - preserves every unrelated query parameter;
 - relies on Go's standard URL encoding for names and values; and
 - only affects routers to which the middleware is attached.
@@ -44,6 +45,10 @@ spec:
       queryParams:
         source: traefik
         environment: production
+      removeQueryParams:
+        - key: temporary
+        - key: source
+          value: client
 ```
 
 Reference the middleware from an `IngressRoute`:
@@ -73,8 +78,11 @@ A request for `/items?page=2&source=client` is forwarded as:
 /items?environment=production&page=2&source=traefik
 ```
 
-Query strings are encoded in deterministic key order. An empty
-`queryParams` map is rejected when Traefik creates the middleware.
+Each `removeQueryParams` item removes every value for its `key` when `value` is
+omitted, or only matching values when `value` is set. Removals are applied
+before `queryParams` additions. Query strings are encoded in deterministic key
+order. Traefik rejects a middleware with both `queryParams` and
+`removeQueryParams` empty.
 
 ## Local plugin development
 

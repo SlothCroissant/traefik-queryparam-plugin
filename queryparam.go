@@ -1,5 +1,5 @@
 // Package traefik_queryparam_plugin provides a Traefik middleware that adds
-// configured query parameters to requests.
+// and removes configured query parameters from requests.
 package traefik_queryparam_plugin
 
 import (
@@ -8,22 +8,32 @@ import (
 	"net/http"
 )
 
-// Config defines the query parameters added by the middleware.
+// Config defines the query parameters added and removed by the middleware.
 type Config struct {
-	QueryParams map[string]string `json:"queryParams,omitempty"`
+	QueryParams       map[string]string   `json:"queryParams,omitempty"`
+	RemoveQueryParams []QueryParamRemoval `json:"removeQueryParams,omitempty"`
+}
+
+// QueryParamRemoval defines a query parameter removal rule. Omit Value to
+// remove all values for Key; set Value to remove only matching values.
+type QueryParamRemoval struct {
+	Key   string  `json:"key"`
+	Value *string `json:"value,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
 func CreateConfig() *Config {
 	return &Config{
-		QueryParams: make(map[string]string),
+		QueryParams:       make(map[string]string),
+		RemoveQueryParams: make([]QueryParamRemoval, 0),
 	}
 }
 
-// QueryParam adds configured query parameters before forwarding a request.
+// QueryParam applies configured query parameter changes before forwarding a request.
 type QueryParam struct {
-	next        http.Handler
-	queryParams map[string]string
+	next              http.Handler
+	queryParams       map[string]string
+	removeQueryParams []QueryParamRemoval
 }
 
 // New creates a query parameter middleware.
@@ -34,8 +44,8 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 	if config == nil {
 		return nil, fmt.Errorf("configuration cannot be nil")
 	}
-	if len(config.QueryParams) == 0 {
-		return nil, fmt.Errorf("queryParams cannot be empty")
+	if len(config.QueryParams) == 0 && len(config.RemoveQueryParams) == 0 {
+		return nil, fmt.Errorf("queryParams and removeQueryParams cannot both be empty")
 	}
 
 	queryParams := make(map[string]string, len(config.QueryParams))
@@ -46,15 +56,47 @@ func New(_ context.Context, next http.Handler, config *Config, _ string) (http.H
 		queryParams[key] = value
 	}
 
+	removeQueryParams := make([]QueryParamRemoval, len(config.RemoveQueryParams))
+	for i, removal := range config.RemoveQueryParams {
+		if removal.Key == "" {
+			return nil, fmt.Errorf("query parameter name cannot be empty")
+		}
+		removeQueryParams[i].Key = removal.Key
+		if removal.Value != nil {
+			valueCopy := *removal.Value
+			removeQueryParams[i].Value = &valueCopy
+		}
+	}
+
 	return &QueryParam{
-		next:        next,
-		queryParams: queryParams,
+		next:              next,
+		queryParams:       queryParams,
+		removeQueryParams: removeQueryParams,
 	}, nil
 }
 
-// ServeHTTP adds the configured values and calls the next handler.
+// ServeHTTP removes configured values, adds configured values, and calls the next handler.
 func (q *QueryParam) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	query := req.URL.Query()
+	for _, removal := range q.removeQueryParams {
+		if removal.Value == nil {
+			query.Del(removal.Key)
+			continue
+		}
+
+		values := query[removal.Key]
+		filtered := values[:0]
+		for _, candidate := range values {
+			if candidate != *removal.Value {
+				filtered = append(filtered, candidate)
+			}
+		}
+		if len(filtered) == 0 {
+			delete(query, removal.Key)
+			continue
+		}
+		query[removal.Key] = filtered
+	}
 	for key, value := range q.queryParams {
 		query.Set(key, value)
 	}

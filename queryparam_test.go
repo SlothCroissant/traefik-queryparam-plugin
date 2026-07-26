@@ -19,6 +19,9 @@ func TestCreateConfig(t *testing.T) {
 	if config.QueryParams == nil {
 		t.Fatal("CreateConfig() returned a nil QueryParams map")
 	}
+	if config.RemoveQueryParams == nil {
+		t.Fatal("CreateConfig() returned a nil RemoveQueryParams map")
+	}
 }
 
 func TestNewValidation(t *testing.T) {
@@ -46,12 +49,18 @@ func TestNewValidation(t *testing.T) {
 			name:   "empty parameters",
 			next:   next,
 			config: CreateConfig(),
-			want:   "queryParams cannot be empty",
+			want:   "queryParams and removeQueryParams cannot both be empty",
 		},
 		{
 			name:   "empty parameter name",
 			next:   next,
 			config: &Config{QueryParams: map[string]string{"": "value"}},
+			want:   "query parameter name cannot be empty",
+		},
+		{
+			name:   "empty removal parameter name",
+			next:   next,
+			config: &Config{RemoveQueryParams: []QueryParamRemoval{{}}},
 			want:   "query parameter name cannot be empty",
 		},
 	}
@@ -79,12 +88,13 @@ func TestServeHTTP(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		method      string
-		target      string
-		queryParams map[string]string
-		wantPath    string
-		wantQuery   url.Values
+		name              string
+		method            string
+		target            string
+		queryParams       map[string]string
+		removeQueryParams []QueryParamRemoval
+		wantPath          string
+		wantQuery         url.Values
 	}{
 		{
 			name:        "adds parameter",
@@ -114,6 +124,37 @@ func TestServeHTTP(t *testing.T) {
 			wantQuery:   url.Values{"replace": {"configured"}},
 		},
 		{
+			name:              "removes all values for a parameter",
+			method:            http.MethodGet,
+			target:            "http://example.com/resource?keep=original&remove=first&remove=second",
+			removeQueryParams: []QueryParamRemoval{{Key: "remove"}},
+			wantPath:          "/resource",
+			wantQuery:         url.Values{"keep": {"original"}},
+		},
+		{
+			name:              "removes matching values for a parameter",
+			method:            http.MethodGet,
+			target:            "http://example.com/resource?keep=original&remove=first&remove=second&remove=first",
+			removeQueryParams: []QueryParamRemoval{{Key: "remove", Value: stringPtr("first")}},
+			wantPath:          "/resource",
+			wantQuery: url.Values{
+				"keep":   {"original"},
+				"remove": {"second"},
+			},
+		},
+		{
+			name:        "applies removals before additions",
+			method:      http.MethodGet,
+			target:      "http://example.com/resource?replace=client&remove=first&remove=second",
+			queryParams: map[string]string{"replace": "configured"},
+			removeQueryParams: []QueryParamRemoval{
+				{Key: "remove"},
+				{Key: "replace", Value: stringPtr("client")},
+			},
+			wantPath:  "/resource",
+			wantQuery: url.Values{"replace": {"configured"}},
+		},
+		{
 			name:   "encodes names and values",
 			method: http.MethodPost,
 			target: "http://example.com/resource",
@@ -140,7 +181,10 @@ func TestServeHTTP(t *testing.T) {
 				rw.WriteHeader(http.StatusNoContent)
 			})
 
-			handler, err := New(context.Background(), next, &Config{QueryParams: test.queryParams}, "test")
+			handler, err := New(context.Background(), next, &Config{
+				QueryParams:       test.queryParams,
+				RemoveQueryParams: test.removeQueryParams,
+			}, "test")
 			if err != nil {
 				t.Fatalf("New() error = %v", err)
 			}
@@ -171,7 +215,10 @@ func TestServeHTTP(t *testing.T) {
 func TestNewCopiesConfiguration(t *testing.T) {
 	t.Parallel()
 
-	config := &Config{QueryParams: map[string]string{"stable": "original"}}
+	config := &Config{
+		QueryParams:       map[string]string{"stable": "original"},
+		RemoveQueryParams: []QueryParamRemoval{{Key: "remove", Value: stringPtr("original")}},
+	}
 	var received url.Values
 	next := http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 		received = req.URL.Query()
@@ -182,11 +229,16 @@ func TestNewCopiesConfiguration(t *testing.T) {
 		t.Fatalf("New() error = %v", err)
 	}
 	config.QueryParams["stable"] = "mutated"
+	*config.RemoveQueryParams[0].Value = "mutated"
 
-	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://example.com/", nil))
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "http://example.com/?remove=original&remove=mutated", nil))
 
-	want := url.Values{"stable": {"original"}}
+	want := url.Values{"stable": {"original"}, "remove": {"mutated"}}
 	if !reflect.DeepEqual(received, want) {
 		t.Fatalf("query = %#v, want %#v", received, want)
 	}
+}
+
+func stringPtr(value string) *string {
+	return &value
 }

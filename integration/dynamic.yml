@@ -21,6 +21,10 @@ http:
             added: plugin
             replace: configured
             special: space & symbols
+          removeQueryParams:
+            - key: remove
+              value: first
+            - key: remove-all
 
   services:
     whoami:
