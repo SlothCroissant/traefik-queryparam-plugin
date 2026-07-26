@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-destination="${PLUGIN_DESTINATION:-/plugins-local/src/github.com/SlothCroissant/traefik-queryparam-plugin}"
+destination="${PLUGIN_DESTINATION:-/plugins-local}"
 
-rm -rf "${destination}"
-mkdir -p "$(dirname "${destination}")"
-cp -a /plugin "${destination}"
+mkdir -p "${destination}"
+rm -rf "${destination:?}/"* "${destination:?}/".[!.]* "${destination:?}/"..?*
+cp -a /plugin/. "${destination}/"
